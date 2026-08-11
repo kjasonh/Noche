@@ -221,7 +221,7 @@ void Lexer::scanIdentifierOrKeyword() {
     }
 }
 
-// ---- string processing helper ----
+// ---- Symbol processing helper ----
 
 /**
  * if end, return True
@@ -256,11 +256,22 @@ char Lexer::peek() const {
     return source_[current_];
 }
 
+/**
+ * This is implementation of lookahead(2)
+ * if the next next is the end, then return '\0'
+ * or not, return next
+ * (This is for the commnet '//')
+ */
 char Lexer::peekNext() const {
     if (current_ + 1 >= source_.size()) return '\0';
     return source_[current_ + 1];
 }
 
+/**
+ * This is for matching between the input symbol and the expected symbol 
+ * if not matched, return false
+ * if matched, return true 
+ */
 bool Lexer::match(char expected) {
     if (isAtEnd() || source_[current_] != expected) return false;
     advance();
@@ -269,29 +280,48 @@ bool Lexer::match(char expected) {
 
 // ---- Token generation ----
 
+/**
+ * make a token without any value (just type)
+ */
 void Lexer::addToken(TokenType type) {
     addToken(type, std::monostate{});
 }
 
+/**
+ * make a token
+ */
 void Lexer::addToken(TokenType type, LiteralValue literal) {
     std::string text = source_.substr(start_, current_ - start_);
     tokens_.emplace_back(type, text, std::move(literal), line_, tokenStartColumn_);
 }
 
-// ---- String classfication ----
+// ---- Lexeme classfication ----
 
+/**
+ * This judges if it is Digit or not 
+ */
 bool Lexer::isDigit(char c) {
     return c >= '0' && c <= '9';
 }
 
+/**
+ * This judges if it is Alphabet or not ('_' is also okay)
+ */
 bool Lexer::isAlpha(char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
 
+/**
+ * This judges if it can be classified as an Alpahbet, Digit or '_'
+ * if it can't, return false
+ */
 bool Lexer::isAlphaNumeric(char c) {
     return isAlpha(c) || isDigit(c);
 }
 
+/**
+ * This collects error to the errors
+ */
 void Lexer::reportError(const std::string& message) {
     errors_.emplace_back(line_, message);
 }

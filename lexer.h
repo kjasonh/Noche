@@ -9,15 +9,23 @@ class Lexer {
 public:
     explicit Lexer(std::string source);
 
-    // 소스 전체를 스캔해서 토큰 벡터 반환 (마지막은 항상 END_OF_FILE)
+    // scan source and return vector of tokens (last token should be EOF(END_OF_FILE))
     std::vector<Token> scanTokens();
 
-    // 스캔 중 발생한 에러 메시지들 (line, message)
+    // getting vector of errors
     const std::vector<std::pair<int, std::string>>& getErrors() const { return errors_; }
 
 /**
- * source_ is source
- * start 
+ * source_           -- source code
+ * start             -- start position number
+ * current_          -- current position number
+ * line_             -- current line count
+ * column_           -- current column count
+ * tokenStartColumn_ -- start position of specific token on current line
+ * 
+ * tokens_           -- vector of tokens
+ * errors_           -- vector of errors
+ * keywords_         -- unordered map mapping string to type
  */
 private:
     std::string source_;
@@ -34,25 +42,26 @@ private:
 
     void scanToken();
 
-    // 문자 처리 헬퍼
+    // Symbol processing
     bool isAtEnd() const;
     char advance();
     char peek() const;
     char peekNext() const;
     bool match(char expected);
 
-    // 토큰 생성 헬퍼
+    // Token generation
     void addToken(TokenType type);
     void addToken(TokenType type, LiteralValue literal);
 
-    // 리터럴/식별자 스캔
+    // Scanning Literals and Keywords
     void scanString();
     void scanNumber();
     void scanIdentifierOrKeyword();
 
-    // 공백/주석 스킵
+    // Skipping whitespaces and Comments
     void skipWhitespaceAndComments();
 
+    // Lexeme classfication
     static bool isDigit(char c);
     static bool isAlpha(char c);
     static bool isAlphaNumeric(char c);

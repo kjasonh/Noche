@@ -2,6 +2,9 @@
 #include <cctype>
 #include <stdexcept>
 
+/**
+ * This constains keywords of Noche
+ */
 const std::unordered_map<std::string, TokenType> Lexer::keywords_ = {
     {"let",    TokenType::LET},
     {"fn",     TokenType::FN},
@@ -17,8 +20,16 @@ const std::unordered_map<std::string, TokenType> Lexer::keywords_ = {
     {"string", TokenType::TYPE_STRING},
 };
 
+/**
+ * First make source can move, and then move it to source_
+ */
 Lexer::Lexer(std::string source) : source_(std::move(source)) {}
 
+/**
+ * read input one by one,
+ * skip whitespace, comments, 
+ * return token as a form of vector
+ */
 std::vector<Token> Lexer::scanTokens() {
     while (!isAtEnd()) {
         skipWhitespaceAndComments();
@@ -33,6 +44,10 @@ std::vector<Token> Lexer::scanTokens() {
     return tokens_;
 }
 
+/**
+ * This is a helper for the scanTokens
+ * skip whitespace, comments
+ */
 void Lexer::skipWhitespaceAndComments() {
     while (!isAtEnd()) {
         char c = peek();
@@ -41,25 +56,29 @@ void Lexer::skipWhitespaceAndComments() {
         } else if (c == '\n') {
             advance();
         } else if (c == '/' && peekNext() == '/') {
-            // 한 줄 주석
+            /* // comment */
             while (peek() != '\n' && !isAtEnd()) advance();
         } else if (c == '/' && peekNext() == '*') {
-            // 블록 주석
+            /* '/*' comment */
             advance(); advance();
             while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
                 advance();
             }
             if (isAtEnd()) {
-                reportError("종료되지 않은 블록 주석");
+                reportError("error: unterminated comment");
                 return;
             }
-            advance(); advance(); // 닫는 "*/"
+            advance(); advance(); // closing '*/'
         } else {
             break;
         }
     }
 }
 
+/**
+ * This is a helper for the scanTokens
+ * real working scanner of source 
+ */
 void Lexer::scanToken() {
     char c = advance();
 
@@ -96,11 +115,11 @@ void Lexer::scanToken() {
 
         case '&':
             if (match('&')) { addToken(TokenType::AND_AND); return; }
-            reportError("예상치 못한 문자 '&' (예: && 를 의도하셨나요?)");
+            reportError("error: unexpected symbol '&'. Did you mean '&&'?");
             return;
         case '|':
             if (match('|')) { addToken(TokenType::OR_OR); return; }
-            reportError("예상치 못한 문자 '|' (예: || 를 의도하셨나요?)");
+            reportError("error: unexpected symbol '|'. Did you mean '||'?");
             return;
 
         case '"':
@@ -113,20 +132,24 @@ void Lexer::scanToken() {
             } else if (isAlpha(c)) {
                 scanIdentifierOrKeyword();
             } else {
-                reportError(std::string("예상치 못한 문자: '") + c + "'");
+                reportError(std::string("error: unexpected symbol \'") + c + "'");
             }
             return;
     }
 }
 
+/**
+ * This is a helper for the scanToken
+ * read STRING
+ * make string as a token and add it
+ */
 void Lexer::scanString() {
     std::string value;
     while (peek() != '"' && !isAtEnd()) {
         if (peek() == '\n') {
-            reportError("문자열이 줄바꿈 전에 닫히지 않음");
+            reportError("error: unclosed string before newline");
             return;
         }
-        // 간단한 이스케이프 처리 (n, t, 쌍따옴표, 역슬래시)
         if (peek() == '\\' && !isAtEnd()) {
             advance();
             char esc = advance();
@@ -136,7 +159,7 @@ void Lexer::scanString() {
                 case '"': value += '"'; break;
                 case '\\': value += '\\'; break;
                 default:
-                    reportError(std::string("알 수 없는 이스케이프 시퀀스: \\") + esc);
+                    reportError(std::string("error: unexpected escape sequence") + esc);
             }
             continue;
         }
@@ -144,14 +167,19 @@ void Lexer::scanString() {
     }
 
     if (isAtEnd()) {
-        reportError("종료되지 않은 문자열 리터럴");
+        reportError("error: unclosed string");
         return;
     }
 
-    advance(); // 닫는 쌍따옴표
+    advance(); // closing double quotes
     addToken(TokenType::STRING_LITERAL, value);
 }
 
+/**
+ * This is a helper for the scanToken
+ * read NUMBER
+ * make number as a token and add it
+ */
 void Lexer::scanNumber() {
     while (isDigit(peek())) advance();
 
@@ -170,13 +198,17 @@ void Lexer::scanNumber() {
     }
 }
 
+/**
+ * This is a helper for the scanToken
+ * read ID or Keyword
+ * make it as a token and add it
+ */
 void Lexer::scanIdentifierOrKeyword() {
     while (isAlphaNumeric(peek())) advance();
 
     std::string text = source_.substr(start_, current_ - start_);
     auto it = keywords_.find(text);
     if (it != keywords_.end()) {
-        // true/false는 리터럴 값도 같이 채워줌
         if (it->second == TokenType::TRUE_LIT) {
             addToken(TokenType::TRUE_LIT, true);
         } else if (it->second == TokenType::FALSE_LIT) {
@@ -189,12 +221,20 @@ void Lexer::scanIdentifierOrKeyword() {
     }
 }
 
-// ---- 문자 처리 헬퍼 ----
+// ---- string processing helper ----
 
+/**
+ * if end, return True
+ * or not, return False
+ */
 bool Lexer::isAtEnd() const {
     return current_ >= source_.size();
 }
 
+/**
+ *  if '\n' then go to next line, or not, advance on current row
+ *  return read char
+ */
 char Lexer::advance() {
     char c = source_[current_++];
     if (c == '\n') {
@@ -206,6 +246,11 @@ char Lexer::advance() {
     return c;
 }
 
+/**
+ * This is implementation of lookahead(1)
+ * if the next is the end, then return '\0' 
+ * or not, return current
+ */
 char Lexer::peek() const {
     if (isAtEnd()) return '\0';
     return source_[current_];
@@ -222,7 +267,7 @@ bool Lexer::match(char expected) {
     return true;
 }
 
-// ---- 토큰 생성 ----
+// ---- Token generation ----
 
 void Lexer::addToken(TokenType type) {
     addToken(type, std::monostate{});
@@ -233,7 +278,7 @@ void Lexer::addToken(TokenType type, LiteralValue literal) {
     tokens_.emplace_back(type, text, std::move(literal), line_, tokenStartColumn_);
 }
 
-// ---- 문자 분류 ----
+// ---- String classfication ----
 
 bool Lexer::isDigit(char c) {
     return c >= '0' && c <= '9';

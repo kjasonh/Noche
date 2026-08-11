@@ -15,10 +15,14 @@ public:
     // 스캔 중 발생한 에러 메시지들 (line, message)
     const std::vector<std::pair<int, std::string>>& getErrors() const { return errors_; }
 
+/**
+ * source_ is source
+ * start 
+ */
 private:
     std::string source_;
-    size_t start_ = 0;      // 현재 토큰의 시작 위치
-    size_t current_ = 0;    // 현재 읽고 있는 위치
+    size_t start_ = 0;
+    size_t current_ = 0;
     int line_ = 1;
     int column_ = 1;
     int tokenStartColumn_ = 1;
